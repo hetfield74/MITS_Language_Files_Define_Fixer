@@ -15,6 +15,7 @@
 include 'includes/application_top.php';
 set_time_limit(0);
 
+$version = 'v1.0.0';
 $removed = false;
 
 if (isset($_SESSION['customers_status']['customers_status'])
@@ -27,7 +28,6 @@ if (isset($_SESSION['customers_status']['customers_status'])
         $menu_file = DIR_FS_DOCUMENT_ROOT . (defined('DIR_ADMIN') ? DIR_ADMIN : 'admin/') . 'includes/extra/menu/mits_language_fixer.php';
         if (is_file($menu_file)) unlink($menu_file);
         unlink(DIR_FS_DOCUMENT_ROOT . basename($PHP_SELF));
-        //xtc_redirect(xtc_href_link(FILENAME_DEFAULT), 'NONSSL');
         $removed = true;
     }
 
@@ -346,7 +346,7 @@ if (isset($_SESSION['customers_status']['customers_status'])
       <img src="https://www.merz-it-service.de/images/logo.png" border="0" alt="Logo von MerZ IT-SerVice" title="MerZ IT-SerVice">
     </a>
   </div>
-  <h1>MITS Language Files Define Fixer</h1>
+  <h1>MITS Language Files Define Fixer <?php echo $version; ?></h1>
   <div class="github-info"><a href="https://github.com/hetfield74/MITS_Language_Files_Define_Fixer">MITS Language Files Define Fixer @GitHub</a></div>
   <div class="notice">
       <?php
