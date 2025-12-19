@@ -12,12 +12,15 @@
  * --------------------------------------------------------------
  */
 
-include('includes/application_top.php');
+include 'includes/application_top.php';
 set_time_limit(0);
 
 $removed = false;
 
-if (isset($_SESSION['customers_status']['customers_status']) && $_SESSION['customers_status']['customers_status'] == '0') {
+if (isset($_SESSION['customers_status']['customers_status'])
+  && $_SESSION['customers_status']['customers_status'] == '0'
+  && defined('DIR_FS_DOCUMENT_ROOT')
+) {
     $action = $_POST['action'] ?? ($_GET['action'] ?? '');
 
     if ($action == 'delfile') {
