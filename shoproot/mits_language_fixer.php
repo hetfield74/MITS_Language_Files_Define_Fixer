@@ -344,7 +344,7 @@ if (isset($_SESSION['customers_status']['customers_status']) && $_SESSION['custo
     </a>
   </div>
   <h1>MITS Language Files Define Fixer</h1>
-  <div class="github-info"><a href="https://www.merz-it-service.de/">MITS Language Files Define Fixer @GitHub</a></div>
+  <div class="github-info"><a href="https://github.com/hetfield74/MITS_Language_Files_Define_Fixer">MITS Language Files Define Fixer @GitHub</a></div>
   <div class="notice">
       <?php
       if ($removed) :
