@@ -26,7 +26,9 @@ if (isset($_SESSION['customers_status']['customers_status'])
 
     if ($action == 'delfile') {
         $menu_file = DIR_FS_DOCUMENT_ROOT . (defined('DIR_ADMIN') ? DIR_ADMIN : 'admin/') . 'includes/extra/menu/mits_language_fixer.php';
-        if (is_file($menu_file)) unlink($menu_file);
+        if (is_file($menu_file)) {
+            unlink($menu_file);
+        }
         unlink(DIR_FS_DOCUMENT_ROOT . basename($PHP_SELF));
         $removed = true;
     }
@@ -79,7 +81,9 @@ if (isset($_SESSION['customers_status']['customers_status'])
                     break;
                 }
 
-                if ($j >= $n) break;
+                if ($j >= $n) {
+                    break;
+                }
 
                 $t = $tokens[$j];
                 $tText = is_array($t) ? $t[1] : $t;
@@ -105,7 +109,9 @@ if (isset($_SESSION['customers_status']['customers_status'])
                     break;
                 }
 
-                if ($k >= $n) break;
+                if ($k >= $n) {
+                    break;
+                }
 
                 $argTok = $tokens[$k];
 
@@ -179,13 +185,15 @@ if (isset($_SESSION['customers_status']['customers_status'])
             return false;
         }
 
-        usort($repls, function ($a, $b) { return $b[0] <=> $a[0]; });
+        usort($repls, function ($a, $b) {
+            return $b[0] <=> $a[0];
+        });
 
         $newCode = $code;
         foreach ($repls as $r) {
             $start = $r[0];
-            $end   = $r[1];
-            $rep   = $r[2];
+            $end = $r[1];
+            $rep = $r[2];
             $newCode = substr($newCode, 0, $start) . $rep . substr($newCode, $end);
         }
 
@@ -218,6 +226,7 @@ if (isset($_SESSION['customers_status']['customers_status'])
       background: #ffe;
       padding: 30px;
       font-size: 14px;
+      color: #444;
     }
 
     code {
@@ -237,8 +246,13 @@ if (isset($_SESSION['customers_status']['customers_status'])
 
     h1 {
       margin-top: 0;
-      font-size: 20px;
+      font-size: 24px;
       text-align: center;
+      color: #6a9;
+    }
+
+    h2 {
+      font-size: 20px;
       color: #6a9;
     }
 
@@ -319,6 +333,7 @@ if (isset($_SESSION['customers_status']['customers_status'])
     .success {
       color: #2f6f61;
       font-weight: 600;
+      font-size: 16px;
     }
 
     .github-info {
@@ -337,7 +352,41 @@ if (isset($_SESSION['customers_status']['customers_status'])
     form {
       text-align: center;
     }
+
+    i.fa-solid {
+      font-size: 16px;
+    }
+
+    .warning i.fa-solid {
+      font-size: 22px;
+    }
+
+    .mits-scrolltop {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      width: 44px;
+      height: 44px;
+      border: 0;
+      border-radius: 999px;
+      background: #6a9;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, .22);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .mits-scrolltop:hover {
+      background: #598
+    }
+
+    .mits-scrolltop__icon {
+      width: 22px;
+      height: 22px
+    }
   </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" referrerpolicy="no-referrer">
 </head>
 <body>
 <div class="box">
@@ -346,8 +395,9 @@ if (isset($_SESSION['customers_status']['customers_status'])
       <img src="https://www.merz-it-service.de/images/logo.png" border="0" alt="Logo von MerZ IT-SerVice" title="MerZ IT-SerVice">
     </a>
   </div>
-  <h1>MITS Language Files Define Fixer <?php echo $version; ?></h1>
-  <div class="github-info"><a href="https://github.com/hetfield74/MITS_Language_Files_Define_Fixer">MITS Language Files Define Fixer @GitHub</a></div>
+  <h1>MITS Language Files Define Fixer <?php
+      echo $version; ?></h1>
+  <div class="github-info"><a href="https://github.com/hetfield74/MITS_Language_Files_Define_Fixer"><i class="fa-solid fa-link" aria-hidden="true"></i> MITS Language Files Define Fixer @GitHub</a></div>
   <div class="notice">
       <?php
       if ($removed) :
@@ -355,40 +405,32 @@ if (isset($_SESSION['customers_status']['customers_status'])
         <div class="warning">
           <p>
             <svg class="warn-icon" viewBox="0 0 24 24">
-              <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2zm0-4h-2v-4h2z"/>
+              <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2zm0-4h-2v-4h2z" />
             </svg>
             <strong>Das Modul wurde erfolgreich vom Server entfernt!</strong>
             <svg class="warn-icon" viewBox="0 0 24 24">
-              <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2zm0-4h-2v-4h2z"/>
+              <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2zm0-4h-2v-4h2z" />
             </svg>
           </p>
         </div>
-        <div style="text-align: center; margin: 0 auto; padding: 10px;">
-          <a class="button" href="<?php echo xtc_href_link(FILENAME_DEFAULT); ?>">Zur Startseite des Shops</a>
-        </div>
+
       <?php
       else:
           ?>
         <h2>
-          <svg class="text-icon" viewBox="0 0 24 24">
-            <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-6h2zm0-8h-2V7h2z"/>
-          </svg>
+          <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
           Hinweis:
-        </h2>
-        <p>
-          Dieses Skript dient dazu, Sprachdateien der modified eCommerce Shopsoftware zu pr&uuml;fen und &auml;ndert
-          <code>define(&apos;KONSTANTE&apos;, &apos;Text&apos;);</code>-Anweisungen automatisch in die sichere Kurzschreibweise
-          <code>defined(&apos;KONSTANTE&apos;) || define(&apos;KONSTANTE&apos;, &apos;Text&apos;);</code> umzuwandeln. </p>
+        </h2><p>
+        Dieses Skript dient dazu, Sprachdateien der modified eCommerce Shopsoftware zu pr&uuml;fen und &auml;ndert
+        <code>define(&apos;KONSTANTE&apos;, &apos;Text&apos;);</code>-Anweisungen automatisch in die sichere Kurzschreibweise
+        <code>defined(&apos;KONSTANTE&apos;) || define(&apos;KONSTANTE&apos;, &apos;Text&apos;);</code> umzuwandeln. </p>
 
         <h2>
-          <svg class="text-icon" viewBox="0 0 24 24">
-            <path d="M12 3a9 9 0 1 0 9 9 9 9 0 0 0-9-9zm1 14h-2v-2h2zm1.1-7.3-.9.9A1.5 1.5 0 0 0 13 12h-2v-.5a2.5 2.5 0 0 1 .7-1.8l1.2-1.2a1.5 1.5 0 1 0-2.6-1H8a3.5 3.5 0 1 1 6.1 2.2z"/>
-          </svg>
+          <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
           Warum ist das sinnvoll?
-        </h2>
-        <p>
-          In vielen Shops werden eigene Sprachdateien &uuml;ber <i>auto_include()</i> eingebunden &ndash; h&auml;ufig zus&auml;tzlich zu den Standard-Sprachdateien.
-          Dabei kommt es sehr schnell zu doppelten Definitionen von Sprachkonstanten, was in PHP zu: </p>
+        </h2><p>
+        In vielen Shops werden eigene Sprachdateien &uuml;ber <i>auto_include()</i> eingebunden &ndash; h&auml;ufig zus&auml;tzlich zu den Standard-Sprachdateien.
+        Dabei kommt es sehr schnell zu doppelten Definitionen von Sprachkonstanten, was in PHP zu: </p>
 
         <ul>
           <li><code>Notice: Constant XXX already defined</code></li>
@@ -410,17 +452,14 @@ if (isset($_SESSION['customers_status']['customers_status'])
         </ul>
 
         <p>
-          Gerade bei Shops mit vielen Erweiterungen oder eigenen Sprachdateien ist diese Absicherung dringend zu empfehlen. </p>
+          Gerade bei Shops mit vielen Erweiterungen oder eigenen Sprachdateien ist diese Absicherung dringend zu empfehlen.
+        </p>
 
         <div class="warning">
           <p>
-            <svg class="warn-icon" viewBox="0 0 24 24">
-              <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2zm0-4h-2v-4h2z"/>
-            </svg>
+            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
             <strong>Unbedingt vorher ein Backup des Sprachordners erstellen!</strong>
-            <svg class="warn-icon" viewBox="0 0 24 24">
-              <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2zm0-4h-2v-4h2z"/>
-            </svg>
+            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
             <br>
             <strong>Nutzung auf eigene Gefahr!</strong>
           </p>
@@ -431,29 +470,15 @@ if (isset($_SESSION['customers_status']['customers_status'])
 
   </div>
 
-    <?php if (!$removed && isset($_SESSION['customers_status']['customers_status']) && $_SESSION['customers_status']['customers_status'] == '0') : ?>
+    <?php
+    if (!$removed && isset($_SESSION['customers_status']['customers_status']) && $_SESSION['customers_status']['customers_status'] == '0') : ?>
       <form method="post">
         <button type="submit" name="run" value="1">
-          <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-               fill="none" stroke="#ffffff" stroke-width="2"
-               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-            <line x1="4" y1="6"  x2="20" y2="6" />
-            <line x1="4" y1="12" x2="14" y2="12" />
-            <line x1="4" y1="18" x2="18" y2="18" />
-            <circle cx="16" cy="12" r="2" />
-          </svg>
+          <i class="fa-solid fa-gear" aria-hidden="true"></i>
           Sprachordner jetzt pr&uuml;fen &amp; anpassen
         </button>
         <button type="submit" name="action" value="delfile" style="background: #d55;">
-          <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-               fill="none" stroke="#ffffff" stroke-width="2"
-               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-            <polyline points="3 6 5 6 21 6" />
-            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-            <line x1="10" y1="11" x2="10" y2="17" />
-            <line x1="14" y1="11" x2="14" y2="17" />
-          </svg>
+          <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
           Modul vom Server l&ouml;schen &raquo;
         </button>
         <p style="text-align:center;font-size:11px;margin-top:20px;">
@@ -463,40 +488,68 @@ if (isset($_SESSION['customers_status']['customers_status'])
         </p>
       </form>
 
-        <?php if (!empty($results)): ?>
-        <p class="success">
-          <svg class="success-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm-1 14-4-4 1.4-1.4L11 12.2l6.6-6.6L19 7z"/>
-          </svg>
-          Fertig! Ge&auml;nderte Dateien:
-        </p>
-        <ul>
-            <?php foreach ($results as $file): ?>
-              <li><?php echo htmlspecialchars($file); ?></li>
-            <?php endforeach; ?>
-        </ul>
-        <?php elseif (isset($_POST['run'])): ?>
-        <p class="success">
-          <svg class="success-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm-1 14-4-4 1.4-1.4L11 12.2l6.6-6.6L19 7z"/>
-          </svg>
-          Keine &Auml;nderungen notwendig 👍
-        </p>
+        <?php
+        if (!empty($results)): ?>
+          <div class="box">
+            <p class="success">
+              <i class="fa-solid fa-circle-check mits-ico" aria-hidden="true"></i>
+              Fertig! Ge&auml;nderte Dateien:
+            </p>
+            <ul>
+                <?php
+                foreach ($results as $file): ?>
+                  <li><?php
+                      echo htmlspecialchars($file); ?></li>
+                <?php
+                endforeach; ?>
+            </ul>
+          </div>
+        <?php
+        elseif (isset($_POST['run'])): ?>
+          <div class="box">
+            <p class="success">
+              <i class="fa-solid fa-circle-check mits-ico" aria-hidden="true"></i>
+              Keine &Auml;nderungen notwendig <i class="fa-solid fa-thumbs-up" aria-hidden="true"></i>
+            </p>
+          </div>
         <?php
         endif;
         ?>
 
-    <?php elseif (!$removed): ?>
+    <?php
+    elseif (!$removed): ?>
       <div class="warning">
         <p>
-          <svg class="warn-icon" viewBox="0 0 24 24">
-            <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2zm0-4h-2v-4h2z"/>
-          </svg>
+          <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
           Sie haben keine Administrator-Rechte!
         </p>
       </div>
-    <?php endif; ?>
+    <?php
+    endif; ?>
+  <div style="text-align: center; margin: 0 auto; padding: 10px;">
+    <a class="button" href="<?php
+    echo xtc_href_link(FILENAME_DEFAULT); ?>"><i class="fa-solid fa-house mits-ico" aria-hidden="true"></i> Zur Startseite des Shops</a>
+  </div>
 
 </div>
+<button type="button" id="mitsScrollTop" class="mits-scrolltop" aria-label="Nach oben scrollen">
+  <i class="fa-solid fa-arrow-up" aria-hidden="true"></i>
+</button>
+
+<script>
+  (function () {
+    var btn = document.getElementById('mitsScrollTop');
+    if (!btn) return;
+
+    btn.addEventListener('click', function () {
+      // Smooth Scroll, mit Fallback
+      try {
+        window.scrollTo({top: 0, behavior: 'smooth'});
+      } catch (e) {
+        window.scrollTo(0, 0);
+      }
+    });
+  })();
+</script>
 </body>
 </html>
