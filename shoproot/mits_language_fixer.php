@@ -528,7 +528,10 @@ if (isset($_SESSION['customers_status']['customers_status'])
     endif; ?>
   <div style="text-align: center; margin: 0 auto; padding: 10px;">
     <a class="button" href="<?php
-    echo xtc_href_link(FILENAME_DEFAULT); ?>"><i class="fa-solid fa-house mits-ico" aria-hidden="true"></i> Zur Startseite des Shops</a>
+    echo xtc_href_link(FILENAME_DEFAULT); ?>">
+      <i class="fa-solid fa-house mits-ico" aria-hidden="true"></i>
+      Zur Startseite des Shops
+    </a>
   </div>
 
 </div>
@@ -542,7 +545,6 @@ if (isset($_SESSION['customers_status']['customers_status'])
     if (!btn) return;
 
     btn.addEventListener('click', function () {
-      // Smooth Scroll, mit Fallback
       try {
         window.scrollTo({top: 0, behavior: 'smooth'});
       } catch (e) {
