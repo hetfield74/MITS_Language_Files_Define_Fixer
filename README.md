@@ -38,16 +38,104 @@ alle Sprachdateien im Sprachordner rekursiv durchsucht und klassische
 Dadurch wird eine Konstante nur dann definiert, wenn sie zuvor noch nicht
 existiert.
 
+---
+
+## Erweiterter Funktionsumfang
+
+Zusätzlich zum klassischen `defined()`-Fix unterstützt das Modul nun auch den
+**Vergleich und die Vervollständigung von Sprachdateien** in allen vorhandenen
+Sprachordnern.
+
+### Vergleich von Sprachordnern (außer `german` und `english`)
+
+Alle Sprachordner **außer `german` und `english`** können automatisch geprüft
+und mit einer **Referenzsprache** verglichen werden.
+
+**Referenzsprache:**
+- `german` oder
+- `english` (wählbar)
+
+**Prüfungen:**
+- Vergleich jeder Sprachdatei mit der entsprechenden Datei der Referenzsprache
+- Erkennung fehlender Sprachkonstanten
+- Strukturierte Ausgabe der Ergebnisse:
+    - Sprache
+    - Datei
+    - fehlende Konstanten
+
+---
+
+### Automatisches Ergänzen fehlender Konstanten (optional)
+
+Optional können erkannte fehlende Konstanten automatisch ergänzt werden:
+
+- Die Inhalte werden aus der Referenzsprache übernommen
+- Neue Einträge werden immer sicher angelegt mit:
+
+      defined('CONSTANT_NAME') || define('CONSTANT_NAME', 'Wert');
+
+- Bestehende Konstanten und Dateien bleiben unverändert
+
+---
+
+### Umgang mit komplett fehlenden Sprachdateien (optional)
+
+Fehlt eine Sprachdatei vollständig in einer Zielsprache, kann das Modul diese
+automatisch behandeln:
+
+- Die komplette Datei wird aus der Referenzsprache übernommen
+- Anschließend wird automatisch der `defined()`-Guard-Fix angewendet
+- Dieses Verhalten ist optional und kann ein- oder ausgeschaltet werden
+
+---
+
+### Korrekte Behandlung sprachabhängiger Dateinamen
+
+In jedem Sprachordner existieren in der Regel sprachabhängige Hauptdateien,
+z.B.:
+
+- `lang/german/german.php`
+- `lang/german/admin/german.php`
+
+Das Modul berücksichtigt diese Besonderheit korrekt:
+
+**Beispiel:**
+- Fehlt `lang/french/french.php`
+- Dann wird der **Inhalt** aus `lang/german/german.php` (oder `english.php`)
+  übernommen
+- Die **Zieldatei wird korrekt als `french.php` angelegt**
+- Gleiches gilt für `admin/french.php`
+
+Damit wird verhindert, dass Dateien mit falschen Namen (z.B. `german.php`) in
+anderen Sprachordnern landen.
+
+---
+
+### Ergebnisübersicht / Dry-Run
+
+Das Modul kann wahlweise:
+
+- nur eine **Übersicht der gefundenen Probleme ausgeben**
+- oder **automatisch korrigierend eingreifen**
+
+Die Ergebnisliste enthält u.a.:
+
+- fehlende Dateien
+- neu angelegte Dateien
+- ergänzte Sprachkonstanten
+
+---
+
 ### Vorteile auf einen Blick
 
 - verhindert doppelte Definitionen von Sprachkonstanten
 - reduziert Notices und Warnings in Log-Files
-- sorgt für saubere Nutzung eigener Sprachdateien
+- ergänzt fehlende Sprachkonstanten automatisch
+- erkennt und kopiert fehlende Sprachdateien
+- korrekte Behandlung sprachspezifischer Dateinamen
+- sorgt für saubere und vollständige Sprachordner
 - ideal für Shops mit vielen Modulen und auto_include()-Mechanismen
 - einmalige Ausführung, keine dauerhafte Belastung des Systems
-
-Gerade bei individuell angepassten Shops oder bei häufigen Modulinstallationen
-ist diese Absicherung dringend zu empfehlen.
 
 <hr />
 

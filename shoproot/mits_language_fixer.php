@@ -15,7 +15,7 @@
 include 'includes/application_top.php';
 set_time_limit(0);
 
-$version = 'v1.0.0';
+$version = 'v1.1.0';
 $removed = false;
 
 if (isset($_SESSION['customers_status']['customers_status'])
@@ -200,8 +200,174 @@ if (isset($_SESSION['customers_status']['customers_status'])
         return (file_put_contents($file, $newCode) !== false);
     }
 
+    function mits_map_language_named_file(string $relPath, string $refLang, string $targetLang): string
+    {
+        $base = basename($relPath);
+        if ($base !== $refLang . '.php') {
+            return $relPath;
+        }
+
+        $dir = dirname($relPath);
+        $mapped = $targetLang . '.php';
+        if ($dir === '.' || $dir === DIRECTORY_SEPARATOR) {
+            return $mapped;
+        }
+        return $dir . DIRECTORY_SEPARATOR . $mapped;
+    }
+
+    function mits_collect_define_calls(string $code): array
+    {
+        if ($code === '') {
+            return [];
+        }
+
+        $tokens = token_get_all($code);
+        $cursor = 0;
+        $len = strlen($code);
+        $out = [];
+
+        $i = 0;
+        $n = count($tokens);
+
+        while ($i < $n) {
+            $tok = $tokens[$i];
+            $text = is_array($tok) ? $tok[1] : $tok;
+            $tokLen = strlen($text);
+
+            if (is_array($tok) && $tok[0] === T_STRING && strtolower($tok[1]) === 'define') {
+                $defineStart = $cursor;
+
+                $j = $i + 1;
+                $jCursor = $cursor + $tokLen;
+                while ($j < $n) {
+                    $t = $tokens[$j];
+                    $tText = is_array($t) ? $t[1] : $t;
+                    if (is_array($t) && ($t[0] === T_WHITESPACE || $t[0] === T_COMMENT || $t[0] === T_DOC_COMMENT)) {
+                        $jCursor += strlen($tText);
+                        $j++;
+                        continue;
+                    }
+                    break;
+                }
+                if ($j >= $n) {
+                    break;
+                }
+                $t = $tokens[$j];
+                $tText = is_array($t) ? $t[1] : $t;
+                if ($tText !== '(') {
+                    $cursor += $tokLen;
+                    $i++;
+                    continue;
+                }
+
+                $k = $j + 1;
+                $kCursor = $jCursor + 1;
+                while ($k < $n) {
+                    $tt = $tokens[$k];
+                    $ttText = is_array($tt) ? $tt[1] : $tt;
+                    if (is_array($tt) && ($tt[0] === T_WHITESPACE || $tt[0] === T_COMMENT || $tt[0] === T_DOC_COMMENT)) {
+                        $kCursor += strlen($ttText);
+                        $k++;
+                        continue;
+                    }
+                    break;
+                }
+                if ($k >= $n) {
+                    break;
+                }
+                $argTok = $tokens[$k];
+                if (!(is_array($argTok) && $argTok[0] === T_CONSTANT_ENCAPSED_STRING)) {
+                    $cursor += $tokLen;
+                    $i++;
+                    continue;
+                }
+
+                $argText = $argTok[1];
+                $constName = substr($argText, 1, -1);
+
+                $p = $i;
+                $pCursor = $cursor;
+                $parenDepth = 0;
+                $foundParen = false;
+                $endPos = null;
+                while ($p < $n) {
+                    $pt = $tokens[$p];
+                    $ptText = is_array($pt) ? $pt[1] : $pt;
+                    $ptLen = strlen($ptText);
+
+                    if ($ptText === '(') {
+                        $parenDepth++;
+                        $foundParen = true;
+                    } elseif ($ptText === ')') {
+                        $parenDepth = max(0, $parenDepth - 1);
+                    } elseif ($ptText === ';' && $foundParen && $parenDepth === 0) {
+                        $endPos = $pCursor + 1;
+                        break;
+                    }
+                    $pCursor += $ptLen;
+                    $p++;
+                }
+
+                if ($endPos !== null && $endPos <= $len) {
+                    $out[$constName] = substr($code, $defineStart, $endPos - $defineStart);
+                }
+
+                $cursor += $tokLen;
+                $i++;
+                continue;
+            }
+
+            $cursor += $tokLen;
+            $i++;
+        }
+
+        return $out;
+    }
+
+    function mits_insert_missing_constants(string $targetFile, array $missingConsts, array $refDefineCalls, string $refLang): bool
+    {
+        if (!is_file($targetFile) || empty($missingConsts)) {
+            return false;
+        }
+
+        $code = file_get_contents($targetFile);
+        if ($code === false) {
+            return false;
+        }
+
+        $insertLines = [];
+        foreach ($missingConsts as $c) {
+            if (!isset($refDefineCalls[$c])) {
+                continue;
+            }
+            $insertLines[] = "defined('{$c}') || " . rtrim($refDefineCalls[$c]);
+        }
+
+        if (empty($insertLines)) {
+            return false;
+        }
+
+        $block = "\n\n// --- added by MITS Language Files Define Fixer (missing constants from {$refLang}) ---\n";
+        $block .= implode("\n", $insertLines) . "\n";
+
+        $pos = strrpos($code, '?>');
+        if ($pos !== false) {
+            $newCode = substr($code, 0, $pos) . $block . substr($code, $pos);
+        } else {
+            $newCode = rtrim($code) . $block;
+        }
+
+        return (file_put_contents($targetFile, $newCode) !== false);
+    }
+
     $results = [];
+    $missingReport = [];
+    $missingInsertedFiles = [];
+
     if (isset($_POST['run']) && is_dir($baseDir)) {
+        $mode = $_POST['mode'] ?? 'guard';
+
+        if ($mode === 'guard') {
         $iterator = new RecursiveIteratorIterator(
           new RecursiveDirectoryIterator($baseDir, FilesystemIterator::SKIP_DOTS)
         );
@@ -209,6 +375,110 @@ if (isset($_SESSION['customers_status']['customers_status'])
             if ($file->isFile() && strtolower($file->getExtension()) === 'php') {
                 if (mits_fix_language_file($file->getPathname())) {
                     $results[] = $file->getPathname();
+                }
+            }
+        }
+    }
+
+        if ($mode === 'missing') {
+            $refLang = ($_POST['ref_lang'] ?? 'german') === 'english' ? 'english' : 'german';
+            $doInsert = isset($_POST['do_insert']) && (string)$_POST['do_insert'] === '1';
+            $copyMissingFiles = isset($_POST['copy_missing_files']) && (string)$_POST['copy_missing_files'] === '1';
+
+            $refDir = $baseDir . DIRECTORY_SEPARATOR . $refLang;
+            if (is_dir($refDir)) {
+                $refFiles = [];
+                $refIt = new RecursiveIteratorIterator(
+                  new RecursiveDirectoryIterator($refDir, FilesystemIterator::SKIP_DOTS)
+                );
+                foreach ($refIt as $rf) {
+                    if ($rf->isFile() && strtolower($rf->getExtension()) === 'php') {
+                        $rel = substr($rf->getPathname(), strlen($refDir) + 1);
+                        $refFiles[$rel] = $rf->getPathname();
+                    }
+                }
+
+                $langs = glob($baseDir . DIRECTORY_SEPARATOR . '*', GLOB_ONLYDIR) ?: [];
+                foreach ($langs as $langDir) {
+                    $lang = basename($langDir);
+                    if ($lang === 'german' || $lang === 'english') {
+                        continue;
+                    }
+
+                    foreach ($refFiles as $rel => $refFile) {
+                        $mappedRel = mits_map_language_named_file($rel, $refLang, $lang);
+                        $targetFile = $langDir . DIRECTORY_SEPARATOR . $mappedRel;
+                        if (!is_file($targetFile)) {
+                            if ($doInsert && $copyMissingFiles) {
+                                $dir = dirname($targetFile);
+                                if (!is_dir($dir)) {
+                                    @mkdir($dir, 0775, true);
+                                }
+
+                                $copied = false;
+                                if (is_dir($dir)) {
+                                    $copied = @copy($refFile, $targetFile);
+                                }
+
+                                if ($copied) {
+                                    mits_fix_language_file($targetFile);
+                                    $missingInsertedFiles[] = $targetFile;
+
+                                    $missingReport[] = [
+                                      'lang' => $lang,
+                                      'file' => $targetFile,
+                                      'missing' => ['(Datei fehlte komplett und wurde aus ' . $refLang . ' übernommen)'],
+                                      'inserted' => true,
+                                    ];
+                                } else {
+                                    $missingReport[] = [
+                                      'lang' => $lang,
+                                      'file' => $targetFile,
+                                      'missing' => ['(Datei fehlt komplett - Übernahme aus ' . $refLang . ' fehlgeschlagen)'],
+                                      'inserted' => false,
+                                    ];
+                                }
+                            } else {
+                                $missingReport[] = [
+                                  'lang' => $lang,
+                                  'file' => $targetFile,
+                                  'missing' => ['(Datei fehlt komplett)'],
+                                  'inserted' => false,
+                                ];
+                            }
+                            continue;
+                        }
+
+                        $refCode = file_get_contents($refFile) ?: '';
+                        $tgtCode = file_get_contents($targetFile) ?: '';
+
+                        $refCalls = mits_collect_define_calls($refCode);
+                        if (empty($refCalls)) {
+                            continue;
+                        }
+
+                        $tgtCalls = mits_collect_define_calls($tgtCode);
+                        $missing = array_values(array_diff(array_keys($refCalls), array_keys($tgtCalls)));
+                        if (empty($missing)) {
+                            continue;
+                        }
+
+                        sort($missing);
+                        $inserted = false;
+                        if ($doInsert) {
+                            $inserted = mits_insert_missing_constants($targetFile, $missing, $refCalls, $refLang);
+                            if ($inserted) {
+                                $missingInsertedFiles[] = $targetFile;
+                            }
+                        }
+
+                        $missingReport[] = [
+                          'lang' => $lang,
+                          'file' => $targetFile,
+                          'missing' => $missing,
+                          'inserted' => $inserted,
+                        ];
+                    }
                 }
             }
         }
@@ -473,9 +743,46 @@ if (isset($_SESSION['customers_status']['customers_status'])
     <?php
     if (!$removed && isset($_SESSION['customers_status']['customers_status']) && $_SESSION['customers_status']['customers_status'] == '0') : ?>
       <form method="post">
+        <div style="text-align:left;max-width:900px;margin:0 auto 10px auto;">
+          <fieldset style="border:1px solid #6a9;border-radius:8px;padding:12px 14px;background:#ffe;">
+            <legend style="padding:0 8px;color:#2f6f61;font-weight:600;">Aktion</legend>
+            <label style="display:block;margin:6px 0;">
+              <input type="radio" name="mode" value="guard" <?php echo (($_POST['mode'] ?? 'guard') === 'guard') ? 'checked' : ''; ?> />
+              Defines absichern (defined() || define())
+            </label>
+            <label style="display:block;margin:6px 0;">
+              <input type="radio" name="mode" value="missing" <?php echo (($_POST['mode'] ?? 'guard') === 'missing') ? 'checked' : ''; ?> />
+              Fehlende Konstanten in Nicht-DE/EN Sprachen finden (und optional einf&uuml;gen)
+            </label>
+
+            <div style="margin:10px 0 0 22px;padding:10px;border-left:3px solid #6a9;">
+              <div style="margin-bottom:8px;">Quelle f&uuml;r fehlende Konstanten:</div>
+              <label style="margin-right:14px;">
+                <input type="radio" name="ref_lang" value="german" <?php echo (($_POST['ref_lang'] ?? 'german') === 'german') ? 'checked' : ''; ?> /> german
+              </label>
+              <label>
+                <input type="radio" name="ref_lang" value="english" <?php echo (($_POST['ref_lang'] ?? 'german') === 'english') ? 'checked' : ''; ?> /> english
+              </label>
+
+              <div style="margin-top:10px;">
+                <label>
+                  <input type="checkbox" name="do_insert" value="1" <?php echo (isset($_POST['do_insert']) && (string)$_POST['do_insert'] === '1') ? 'checked' : ''; ?> />
+                  Fehlende Konstanten automatisch einf&uuml;gen
+                <div style="margin-top:6px;margin-left:22px;">
+                  <label>
+                    <input type="checkbox" name="copy_missing_files" value="1" <?php echo (isset($_POST['copy_missing_files']) && (string)$_POST['copy_missing_files'] === '1') ? 'checked' : ''; ?> />
+                    Falls eine Datei komplett fehlt: komplette Datei aus der Referenzsprache &uuml;bernehmen
+                  </label>
+                </div>
+                </label>
+              </div>
+            </div>
+          </fieldset>
+        </div>
+
         <button type="submit" name="run" value="1">
           <i class="fa-solid fa-gear" aria-hidden="true"></i>
-          Sprachordner jetzt pr&uuml;fen &amp; anpassen
+          Ausf&uuml;hren
         </button>
         <button type="submit" name="action" value="delfile" style="background: #d55;">
           <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
@@ -489,7 +796,7 @@ if (isset($_SESSION['customers_status']['customers_status'])
       </form>
 
         <?php
-        if (!empty($results)): ?>
+        if (!empty($results) && (($_POST['mode'] ?? 'guard') === 'guard')): ?>
           <div class="box">
             <p class="success">
               <i class="fa-solid fa-circle-check mits-ico" aria-hidden="true"></i>
@@ -505,7 +812,7 @@ if (isset($_SESSION['customers_status']['customers_status'])
             </ul>
           </div>
         <?php
-        elseif (isset($_POST['run'])): ?>
+        elseif (isset($_POST['run']) && (($_POST['mode'] ?? 'guard') === 'guard')): ?>
           <div class="box">
             <p class="success">
               <i class="fa-solid fa-circle-check mits-ico" aria-hidden="true"></i>
@@ -515,6 +822,55 @@ if (isset($_SESSION['customers_status']['customers_status'])
         <?php
         endif;
         ?>
+
+        <?php
+        if (isset($_POST['run']) && (($_POST['mode'] ?? 'guard') === 'missing')): ?>
+          <div class="box">
+            <p class="success">
+              <i class="fa-solid fa-list-check" aria-hidden="true"></i>
+              Ergebnis: Fehlende Konstanten in Nicht-DE/EN Sprachen
+            </p>
+
+            <?php if (empty($missingReport)): ?>
+              <p class="success">
+                <i class="fa-solid fa-circle-check mits-ico" aria-hidden="true"></i>
+                Keine fehlenden Konstanten gefunden.
+              </p>
+            <?php else: ?>
+              <ul>
+                <?php foreach ($missingReport as $row): ?>
+                  <li>
+                    <strong><?php echo htmlspecialchars($row['lang']); ?></strong> &ndash;
+                    <?php echo htmlspecialchars($row['file']); ?>
+                    <?php if (!empty($row['missing']) && $row['missing'][0] !== '(Datei fehlt komplett)'): ?>
+                      <br>
+                      Fehlend (<?php echo count($row['missing']); ?>):
+                      <code><?php echo htmlspecialchars(implode(', ', $row['missing'])); ?></code>
+                      <?php if ($row['inserted']): ?>
+                        <span class="success">&nbsp;(&uuml;bernommen)</span>
+                      <?php endif; ?>
+                    <?php else: ?>
+                      <br>
+                      <span class="warning" style="display:inline-block;padding:2px 6px;">Datei fehlt komplett</span>
+                    <?php endif; ?>
+                  </li>
+                <?php endforeach; ?>
+              </ul>
+
+              <?php if (!empty($missingInsertedFiles)): ?>
+                <p class="success" style="margin-top:18px;">
+                  <i class="fa-solid fa-circle-check mits-ico" aria-hidden="true"></i>
+                  Dateien, in die etwas eingef&uuml;gt wurde:
+                </p>
+                <ul>
+                  <?php foreach (array_values(array_unique($missingInsertedFiles)) as $f): ?>
+                    <li><?php echo htmlspecialchars($f); ?></li>
+                  <?php endforeach; ?>
+                </ul>
+              <?php endif; ?>
+            <?php endif; ?>
+          </div>
+        <?php endif; ?>
 
     <?php
     elseif (!$removed): ?>
